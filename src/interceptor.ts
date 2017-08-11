@@ -14,6 +14,15 @@ export default class Interceptor {
         }
     }
 
+    /**
+     * Метод принимает массив
+     * @param funcs
+     * @returns {Promise<[*]>}
+     */
+    static interceptFuncs(funcs) {
+        return Promise.all(funcs.map((func) => Interceptor.interceptFunc(func)))
+    }
+
     static interceptFunc(func) {
         return new Promise((resolve, reject) => {
             const counter = this.createCounter(resolve);
@@ -22,17 +31,25 @@ export default class Interceptor {
 
             try {
                 counter(1, '-> sync / promise');
+
                 const res = func();
+
                 if (res && res.then) {
+                    // если функция - промис
                     res
                         .then(() => counter(-1, '<- promise'))
-                        .catch((e) => reject(e))
+                        .catch(() => counter(-1, '<- promise'))
 
                 } else {
+                    // для всех остальные случаев
                     counter(-1, '<- sync');
                 }
+
             } catch (e) {
-                reject(e);
+                // если ошибка - просто ловим и считаем ф-цию завершенной
+                console.warn(e.message);
+                counter(-1, '<- sync');
+                resolve();
             }
 
             this.clearTimeoutInterception(setTimeout);
@@ -49,7 +66,8 @@ export default class Interceptor {
                 try {
                     func();
                 } catch (e) {
-                    console.error('!!!', e);
+                    // если ошибка - просто ловим и считаем ф-цию завершенной
+                    console.warn(e.message);
                 }
                 counter(-1, '<- timeout');
             }, timeout)
@@ -67,6 +85,7 @@ export default class Interceptor {
         const _send = XMLHttpRequest.prototype.send;
         XMLHttpRequest.prototype.send = function (...args) {
 
+            // обработчик на окончание запроса
             this.addEventListener('readystatechange', () => {
                 if (this.readyState !== 4) return;
                 counter(-1, '<- xhr');
