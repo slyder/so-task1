@@ -9,7 +9,7 @@ export default class Interceptor {
         let counter = 0;
         return function(inc, debugNote = '') {
             counter += inc;
-            console.info('#counter', counter, debugNote);
+            // console.info('#counter', counter, debugNote);
             if (counter === 0) onCompleteAll();
         }
     }
